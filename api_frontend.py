@@ -58,11 +58,27 @@ def get_toilet(room_num: int):
         raise HTTPException(404, f"Couldn't find toilet with room number: {room_num}'")
 
 
+def delta_time():
+    list_delta = []
+    for i in range(len(list_exit_timestamp), 0, -1):
+        for j in range(len(list_exit_timestamp), 0, -1):
+            if list(list_enter_timestamp[i].keys())[0] == list(list_exit_timestamp[j].keys())[0]:
+                if list_enter_timestamp[i]["room_num"] < list_exit_timestamp[j]["room_num"]:
+                    delta = list_exit_timestamp[j]["room_num"] - list_enter_timestamp[i]["room_num"]
+                    second = delta.total_second()
+                    list_delta.append(second)
+    return list_delta
+
+
 @app.get('/toilet/time-estimated')
 def get_estimated():
+    list_delta_time = delta_time()
     estimated_time = sum(list_delta_time) / len(list_delta_time)
+    estimated_min = estimated_time/60
+    estimated_second = estimated_time - (int(estimated_min)*60)
+    string_estimated = f"{int(estimated_min)} min:{estimated_second} second"
     query = {
-        "average_time": estimated_time
+        "average_time": string_estimated
     }
     return query
 
@@ -95,10 +111,3 @@ def get_exit(room_num: int):
             }
 
 
-def delta_time():
-    list_delta = []
-
-    for i in range(len(list_exit_timestamp)):
-        delta = list_enter_timestamp[i]["room_num"]-list_enter_timestamp[i]["room_num"]
-
-    re
