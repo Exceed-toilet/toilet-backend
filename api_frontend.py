@@ -11,7 +11,8 @@ client = MongoClient('mongodb://localhost', 27017)
 
 db = client["toilet_project"]
 
-collection = db["user"]
+collection1 = db["enter"]
+collection2 = db["exit"]
 
 app = FastAPI()
 
@@ -28,20 +29,27 @@ class Toilet(BaseModel):
 @app.post('/toilet')
 def post_hardware(toilet: Toilet):
     """
-    use_status = 0 is no user
-    use_status = 1 is no user
+    use_status = 0 don't has user
+    use_status = 1 has user
     """
     if toilet.use_status == 0:
-        list_exit_timestamp.append({str(toilet.room_num): datetime.now()})
-        res_encode = jsonable_encoder(toilet)
-        collection.insert_one(res_encode)
+        print(str(toilet.room_num) + f"{datetime.now()}")
+        query = {
+            "room_num": toilet.room_num,
+            "use_status": toilet.use_status,
+            "exit": datetime.now()
+        }
+        collection2.insert_one(query)
         return {
             "result": "OK"
         }
     elif toilet.use_status == 1:
-        list_enter_timestamp.append({str(toilet.room_num): datetime.now()})
-        res_encode = jsonable_encoder(toilet)
-        collection.insert_one(res_encode)
+        query = {
+            "room_num": toilet.room_num,
+            "use_status": toilet.use_status,
+            "enter": datetime.now()
+        }
+        collection1.insert_one(query)
         return {
             "result": "OK"
         }
@@ -52,14 +60,15 @@ def post_hardware(toilet: Toilet):
 
 @app.get('/toilet/by-room/{room_num}')
 def get_toilet(room_num: int):
-    list_result = list(collection.find({"room_number": room_num}, {"_id": 0}))
-    if len(list_result) != 0:
-        data = []
-        for result in list_result:
-            data.append(result)
-        return data
-    else:
-        raise HTTPException(404, f"Couldn't find toilet with room number: {room_num}'")
+    list_result = list(collection1.find({"room_num": room_num}, {"_id": 0}))
+    if list(collection2.find({"room_num": room_num}, {"_id": 0}))[-1]["exit"] < list_result[-1]["enter"]:
+        if len(list_result) != 0:
+            data = []
+            for result in list_result:
+                data.append(result)
+            return data[-1]
+        else:
+            raise HTTPException(404, f"Couldn't find toilet with room number: {room_num}'")
 
 
 def delta_time():
@@ -88,30 +97,28 @@ def get_estimated():
 
 
 @app.get('/toilet/enter-time/by-room/{room_num}')
-def get_enter(room_num: int):
-    for i in range(len(list_enter_timestamp), 0, -1):
-        room = list(list_enter_timestamp[i].keys())[0]
-        if room == room_num:
-            return {
-                "result": list_enter_timestamp[i]["room_num"]
+def get_enter_time(room_num: int):
+    list_result = list(collection1.find({"room_num": room_num}, {"_id": 0}))
+    if len(list_result) != 0:
+        return {
+                "result": list_result[-1]["enter"]
             }
-        else:
-            return {
-                "result": "FAIL"
-            }
+    else:
+        return {
+            "result": "FAIL"
+        }
 
 
-@app.get('/toilet/enter-time/by-room/{room_num}')
-def get_exit(room_num: int):
-    for i in range(len(list_exit_timestamp), 0, -1):
-        room = list(list_exit_timestamp[i].keys())[0]
-        if room == room_num:
-            return {
-                "result": list_exit_timestamp[i]["room_num"]
-            }
-        else:
-            return {
-                "result": "FAIL"
-            }
+@app.get('/toilet/exit-time/by-room/{room_num}')
+def get_exit_time(room_num: int):
+    list_result = list(collection2.find({"room_num": room_num}, {"_id": 0}))
+    if len(list_result) != 0:
+        return {
+            "result": list_result[-1]["exit"]
+        }
+    else:
+        return {
+            "result": "FAIL"
+        }
 
 
