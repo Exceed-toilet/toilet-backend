@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 from fastapi.encoders import jsonable_encoder
 from datetime import datetime
-
+import datetime
 
 client = MongoClient('mongodb://localhost', 27017)
 
@@ -67,20 +67,25 @@ def get_toilet(room_num: int):
             raise HTTPException(404, f"Couldn't find toilet with room number: {room_num}'")
 
 
-@app.get('/toilet/time-estimated')
-def get_estimated():
+@app.get('/toilet/time-estimated/{room_num}')
+def get_estimated(room_num: int):
     list_delta_time = []
-    for i in list(collection1.find({})):
-        for j in list(collection2.find({})):
-            delta = j["exit"] - i["enter"]
-            total_second = delta
-            list_delta_time.append(total_second)
+    list_result = list(collection1.find({"room_num": room_num}, {"_id": 0}))
+    size = len(list(collection2.find({"room_num": room_num}, {"_id": 0})))
+    for i in range(size):
+        for j in range(size):
+            if len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) != 0:
+                if list(collection2.find({"room_num": room_num}, {"_id": 0}))[i]["exit"] > list_result[j]["enter"]:
+                    delta = (list(collection2.find({"room_num": room_num}, {"_id": 0}))[i]["exit"]
+                              - list_result[j]["enter"])
+                    second = delta/datetime.timedelta(seconds=1)
+                    list_delta_time.append(second)
     estimated_time = sum(list_delta_time) / len(list_delta_time)
     estimated_min = estimated_time/60
     estimated_second = estimated_time - (int(estimated_min)*60)
-    string_estimated = f"{int(estimated_min)} min:{estimated_second} second"
+    string_estimated = f"{int(estimated_min)} min:{estimated_second:.2f} second"
     query = {
-        "average_time": list_delta_time
+        "average_time": string_estimated
     }
     return query
 
@@ -116,8 +121,10 @@ def check_long_use(room_num: int):
     list_result = list(collection1.find({"room_num": room_num}, {"_id": 0}))
     if len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) != 0:
         if list(collection2.find({"room_num": room_num}, {"_id": 0}))[-1]["exit"] < list_result[-1]["enter"]:
+            minute = (datetime.now() - list_result[-1]["enter"]).total_seconds() / 60
+            second = (datetime.now() - list_result[-1]["enter"]).total_seconds() - int(minute) * 60
             return {
-                "result": (datetime.now() - list_result[-1]["enter"])
+                "result": f"{int(minute)} min: {second:.2f} sec"
             }
         else:
             return {
