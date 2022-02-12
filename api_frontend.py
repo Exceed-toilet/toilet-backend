@@ -84,26 +84,27 @@ def get_estimated(room_num: int):
     list_delta_time = []
     list_result = list(collection1.find({"room_num": room_num}, {"_id": 0}))
     size = len(list(collection2.find({"room_num": room_num}, {"_id": 0})))
-    for i in range(size-1):
-        for j in range(size-1):
-            if len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) != 0:
-                if list(collection2.find({"room_num": room_num}, {"_id": 0}))[i]["exit"] > list_result[j]["enter"]:
-                    delta = (list(collection2.find({"room_num": room_num}, {"_id": 0}))[i]["exit"]
-                              - list_result[j]["enter"])
-                    second = delta/datetime.timedelta(seconds=1)
-                    list_delta_time.append(second)
-    estimated_time = sum(list_delta_time) / len(list_delta_time)
-    estimated_min = estimated_time/60
-    estimated_second = estimated_time - (int(estimated_min)*60)
-    string_estimated = f"{int(estimated_min)} min:{estimated_second:.2f} second"
-    if len(list_result) == 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) == 0:
-        return {
-            "result": "FAIL"
+    try:
+        for i in range(size-1):
+            for j in range(size-1):
+                if len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) != 0:
+                    if list(collection2.find({"room_num": room_num}, {"_id": 0}))[i]["exit"] > list_result[j]["enter"]:
+                        delta = (list(collection2.find({"room_num": room_num}, {"_id": 0}))[i]["exit"]
+                                  - list_result[j]["enter"])
+                        second = delta/datetime.timedelta(seconds=1)
+                        list_delta_time.append(second)
+        estimated_time = sum(list_delta_time) / len(list_delta_time)
+        estimated_min = estimated_time/60
+        estimated_second = estimated_time - (int(estimated_min)*60)
+        string_estimated = f"{int(estimated_min)} min:{estimated_second:.2f} second"
+        query = {
+            "average_time": string_estimated
         }
-    query = {
-        "average_time": string_estimated
-    }
-    return query
+        return query
+    except:
+        return {
+            "average_time": 0
+        }
 
 
 @app.get('/toilet/enter-time/by-room/{room_num}')
