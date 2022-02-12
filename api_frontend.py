@@ -33,11 +33,15 @@ def post_hardware(toilet: Toilet):
     """
     if toilet.use_status == 0:
         list_exit_timestamp.append({str(toilet.room_num): datetime.now()})
+        res_encode = jsonable_encoder(toilet)
+        collection.insert_one(res_encode)
         return {
             "result": "OK"
         }
     elif toilet.use_status == 1:
         list_enter_timestamp.append({str(toilet.room_num): datetime.now()})
+        res_encode = jsonable_encoder(toilet)
+        collection.insert_one(res_encode)
         return {
             "result": "OK"
         }
