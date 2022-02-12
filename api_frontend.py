@@ -28,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class Toilet(BaseModel):
     room_num: int
     use_status: int
@@ -83,8 +84,8 @@ def get_estimated(room_num: int):
     list_delta_time = []
     list_result = list(collection1.find({"room_num": room_num}, {"_id": 0}))
     size = len(list(collection2.find({"room_num": room_num}, {"_id": 0})))
-    for i in range(size):
-        for j in range(size):
+    for i in range(size-1):
+        for j in range(size-1):
             if len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) != 0:
                 if list(collection2.find({"room_num": room_num}, {"_id": 0}))[i]["exit"] > list_result[j]["enter"]:
                     delta = (list(collection2.find({"room_num": room_num}, {"_id": 0}))[i]["exit"]
@@ -95,6 +96,10 @@ def get_estimated(room_num: int):
     estimated_min = estimated_time/60
     estimated_second = estimated_time - (int(estimated_min)*60)
     string_estimated = f"{int(estimated_min)} min:{estimated_second:.2f} second"
+    if len(list_result) == 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) == 0:
+        return {
+            "result": "FAIL"
+        }
     query = {
         "average_time": string_estimated
     }
