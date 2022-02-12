@@ -16,10 +16,6 @@ collection2 = db["exit"]
 
 app = FastAPI()
 
-list_enter_timestamp = []
-list_exit_timestamp = []
-list_delta_time = []
-
 
 class Toilet(BaseModel):
     room_num: int
@@ -71,27 +67,20 @@ def get_toilet(room_num: int):
             raise HTTPException(404, f"Couldn't find toilet with room number: {room_num}'")
 
 
-def delta_time():
-    list_delta = []
-    for i in range(len(list_exit_timestamp), 0, -1):
-        for j in range(len(list_exit_timestamp), 0, -1):
-            if list(list_enter_timestamp[i].keys())[0] == list(list_exit_timestamp[j].keys())[0]:
-                if list_enter_timestamp[i]["room_num"] < list_exit_timestamp[j]["room_num"]:
-                    delta = list_exit_timestamp[j]["room_num"] - list_enter_timestamp[i]["room_num"]
-                    second = delta.total_second()
-                    list_delta.append(second)
-    return list_delta
-
-
 @app.get('/toilet/time-estimated')
 def get_estimated():
-    list_delta_time = delta_time()
+    list_delta_time = []
+    for i in list(collection1.find({})):
+        for j in list(collection2.find({})):
+            delta = j["exit"] - i["enter"]
+            total_second = delta
+            list_delta_time.append(total_second)
     estimated_time = sum(list_delta_time) / len(list_delta_time)
     estimated_min = estimated_time/60
     estimated_second = estimated_time - (int(estimated_min)*60)
     string_estimated = f"{int(estimated_min)} min:{estimated_second} second"
     query = {
-        "average_time": string_estimated
+        "average_time": list_delta_time
     }
     return query
 
@@ -122,3 +111,24 @@ def get_exit_time(room_num: int):
         }
 
 
+@app.get('/toilet/how-long/by-room/{room_num}')
+def check_long_use(room_num: int):
+    list_result = list(collection1.find({"room_num": room_num}, {"_id": 0}))
+    if len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) != 0:
+        if list(collection2.find({"room_num": room_num}, {"_id": 0}))[-1]["exit"] < list_result[-1]["enter"]:
+            return {
+                "result": (datetime.now() - list_result[-1]["enter"])
+            }
+        else:
+            return {
+                "result": "FAIL"
+            }
+    elif len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) == 0:
+        minute = (datetime.now() - list_result[-1]["enter"]).total_seconds()/60
+        second = (datetime.now() - list_result[-1]["enter"]).total_seconds() - int(minute)*60
+        return {
+            "result": f"{int(minute)} min: {second:.2f} sec"
+        }
+    return {
+        "result": "FAIL"
+    }
