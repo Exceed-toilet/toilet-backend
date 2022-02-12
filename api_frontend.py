@@ -4,7 +4,6 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from fastapi.encoders import jsonable_encoder
-from datetime import datetime
 import datetime
 
 client = MongoClient('mongodb://localhost', 27017)
@@ -29,11 +28,11 @@ def post_hardware(toilet: Toilet):
     use_status = 1 has user
     """
     if toilet.use_status == 0:
-        print(str(toilet.room_num) + f"{datetime.now()}")
+        print(toilet)
         query = {
             "room_num": toilet.room_num,
             "use_status": toilet.use_status,
-            "exit": datetime.now()
+            "exit": datetime.datetime.now()
         }
         collection2.insert_one(query)
         return {
@@ -43,7 +42,7 @@ def post_hardware(toilet: Toilet):
         query = {
             "room_num": toilet.room_num,
             "use_status": toilet.use_status,
-            "enter": datetime.now()
+            "enter": datetime.datetime.now()
         }
         collection1.insert_one(query)
         return {
@@ -121,8 +120,8 @@ def check_long_use(room_num: int):
     list_result = list(collection1.find({"room_num": room_num}, {"_id": 0}))
     if len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) != 0:
         if list(collection2.find({"room_num": room_num}, {"_id": 0}))[-1]["exit"] < list_result[-1]["enter"]:
-            minute = (datetime.now() - list_result[-1]["enter"]).total_seconds() / 60
-            second = (datetime.now() - list_result[-1]["enter"]).total_seconds() - int(minute) * 60
+            minute = (datetime.datetime.now() - list_result[-1]["enter"]).total_seconds() / 60
+            second = (datetime.datetime.now() - list_result[-1]["enter"]).total_seconds() - int(minute) * 60
             return {
                 "result": f"{int(minute)} min: {second:.2f} sec"
             }
@@ -131,8 +130,8 @@ def check_long_use(room_num: int):
                 "result": "FAIL"
             }
     elif len(list_result) != 0 and len(list(collection2.find({"room_num": room_num}, {"_id": 0}))) == 0:
-        minute = (datetime.now() - list_result[-1]["enter"]).total_seconds()/60
-        second = (datetime.now() - list_result[-1]["enter"]).total_seconds() - int(minute)*60
+        minute = (datetime.datetime.now() - list_result[-1]["enter"]).total_seconds()/60
+        second = (datetime.datetime.now() - list_result[-1]["enter"]).total_seconds() - int(minute)*60
         return {
             "result": f"{int(minute)} min: {second:.2f} sec"
         }
